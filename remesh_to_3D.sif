@@ -1,0 +1,127 @@
+! Copied from Peter Raback's NoncomformingRestart test.
+! Test case demonstrating how to have a non-conforming restart using
+! mesh of lower dimension.
+
+Header
+  Mesh DB "." "mesh"
+End
+
+Simulation
+  Coordinate System = Cartesian 3D
+  Max Output Level = 9
+
+  Simulation Type = Steady
+  Steady State Max Iterations = 1
+
+  Output Intervals = 1
+  Post File = "case.vtu"
+
+  Initialize Dirichlet Conditions = False
+  Restart Before Initial Conditions = Logical True
+  Restart Error Continue = Logical True  ! continues even if mismatch in number of partitions
+  Use Mesh Projector = Logical False
+
+  Extruded Mesh Levels = 10
+End
+
+Constants
+End
+
+Body 1
+  Name = "Body"
+  Target Bodies(1) = 1
+  Equation = 1
+  Material = 1
+  Body Force = 1
+End
+
+Material 1
+  Name = "Material"
+End
+
+Body Force 1
+  Name = "source"
+  Heat Source = 1
+End 
+
+
+Solver 1
+  Exec Solver = before all
+  Equation = "InterpSolver"
+
+! Perform the interpolation solver before all other solvers, only once.
+  Exec Solver = Before all
+  Procedure = "Mesh2MeshSolver" "Mesh2MeshSolver"
+
+!  Mesh = -part 2 "rect"  ! in parallel when initial computation in several partitions
+!  Mesh = -single "mesh"  ! in serial 
+  Mesh = -part 3 "mesh"
+  Restart File = File "SSA.result"
+  Restart Error Continue = Logical True  
+
+! Ensures that we perform interpolation on plane 
+  Interpolation Passive Coordinate = Integer 3 
+
+  Variable 1 = "GroundedMask"
+  Variable 2 = "bedrock"
+  Variable 3 = "zs"
+  Variable 4 = "zb"
+End 
+
+Solver 2
+  Exec Solver = "never"
+!  Exec Solver = "Before All"
+  Equation = "MapCoordinateInit"
+  Procedure = "StructuredMeshMapper" "StructuredMeshMapper"
+  Active Coordinate = Integer 3
+  Dot Product Tolerance = Real 0.001
+  Minimum Mesh Height = Real 20.0
+  Top Surface Variable Name = String zs
+  Bottom Surface Variable Name = String zb
+
+  Exported variable 1 = -dofs 1 zs
+  Exported Variable 2 = -dofs 1 zb
+  Exported Variable 3 = -dofs 1 bedrock
+  Exported Variable 4 = -dofs 1 GroundedMask
+End
+
+!--------------------------------------------------------
+Equation 1
+  Active Solvers (2) = 1 2
+End
+
+!--------------------------------------------------------
+Boundary Condition 1
+  Name = "Ice Front"
+  Target Boundaries = 1
+
+  Calving Front = logical true
+
+  Save Scalars = Logical True
+End
+
+Boundary Condition 1
+  Name = "upstream"
+  Target Boundaries(1)  = 1
+
+!  ssavelocity 1 = Real 
+  ssavelocity 2 = Real 0.0
+End
+
+Boundary Condition 2
+  Name = "icefront"
+  Target Boundaries(1)  = 3
+
+End
+
+Boundary Condition 3
+  Name = "sidewall"
+  Target Boundaries(2)  = 2 4
+
+  ssavelocity 1 = Real 0.0
+!  ssavelocity 2 = Real 
+End
+
+
+
+
