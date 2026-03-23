@@ -26,7 +26,7 @@ End
 Simulation
 
   Coordinate System  = Cartesian 2D
-  Simulation Type = Transient
+  Simulation Type = "Transient"
   Simulation Timing = Logical True
   Timestepping Method = "bdf"
   BDF Order = 2
