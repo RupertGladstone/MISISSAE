@@ -33,8 +33,23 @@ It can also be a starting point for using optimised parameters from an SSA inver
 This runs the model forward using the HO (Blatter-Pattyn) solver:
 HO.sif
 
-This runs the model forward using the Stokes solver:
-Stokes.sif
+These sifs run the model forward using the Stokes solver:
+Stokes_ML.sif  	   MUMPS, Legacy Stokes solver
+Stokes_ML.sif  	   MUMPS, Legacy Stokes solver, restart to activate GZEPT (Grounding Zone Effective Pressure Threshold)
+
+
+# Notes on the HO setup
+
+We borrow approaches from Stokes and SSA setups for different aspects of transient simulations using the HO model.
+
+## Stokes elements
+
+Mesh extrusion tools and 3D boundary labelling are used similar to Stokes simulations. The HO solver itself runs on the 3D main body. The basal friction is calculated using the same code as the Stokes solver.
+
+
+## SSA elements
+
+The geometry evolution uses the SSA approach, specifically the thickness and flotation solvers. This is all done on the 2D lower surface of the 2D body, using the vertically averaged HO velocities instead of the SSA velocities. The upper free surface elevation, "FS upper", is thus calculated on the lower surface and must be projected upward so that the structured mesh mapper can update the 3D geometry.
 
 
 # Numerical choices: linear solve and preconditioner
