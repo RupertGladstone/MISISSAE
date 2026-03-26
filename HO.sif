@@ -6,7 +6,8 @@
 
 !--------------------------------------------------------
 $name = "HO" ! "Higher order" aka "Blatter Pattyn" model
-$dt = #864000.0 / yearinsec
+!!$dt = #864000.0 / yearinsec
+$dt = #2592000.0 / yearinsec
 
 !--------------------------------------------------------
 Header
@@ -15,7 +16,8 @@ End
 
 !--------------------------------------------------------
 Constants
-  Buoyancy Use Basal Melt = Logical False
+!  Buoyancy Use Basal Melt = Logical False
+  Sea Level = Real 0.0
   Water Density = Real #rhow
   Gas Constant = Real 8.314
 End
@@ -30,12 +32,12 @@ Simulation
   Timestepping Method = "BDF"
   BDF Order = 1
 
-  Timestep Intervals = 1
+  Timestep Intervals = 120
   Timestep Sizes = Real $dt
   Output Intervals = 1
 
   Steady State Min Iterations = 1
-  Steady State Max Iterations = 1
+  Steady State Max Iterations = 10
 
   Initialize Dirichlet Conditions = Logical False
   Output File = "$name".result" !"
@@ -60,7 +62,7 @@ Body 2
   Body Force = 2
   Material = 2
 End
-
+	
 
 !--------------------------------------------------------
 Initial Condition 1
@@ -68,7 +70,7 @@ Initial Condition 1
   height = Real 0.0
   Pressure = Real 0.0
   Velocity 1 = Real 0.0
-  Velocity 2 = Real 0.0
+  Velocity 2 = Real 100.0
   Velocity 3 = Real 0.0
   Normal Vector 1 = Real 0.0
   Normal Vector 2 = Real 0.0
@@ -124,12 +126,14 @@ Material 1
   Activation Energy 2 = Real 139e3
   Glen Enhancement Factor = Real 1.0
 
-  Constant Temperature = Real -5.0
+  Relative Temperature = Real -5.0
+!  Constant Temperature = Real -5.0
 
   Cauchy = Logical True
 End
 
 Material 2
+  SSA Mean Density = Real #rhoi   ! The flotation solver has this hard coded
   Density =  Real #rhoi
   Min FS lower = Equals bedrock
   Max FS lower = Real 0.0
@@ -149,7 +153,6 @@ Solver 1
   Bottom Surface Variable Name = String FS lower
 End
 
-! Height and depth not strictly needed for this simulation, but often useful.
 Solver 2
   Exec Solver = "Before all"
   Equation = "HeightDepth"
@@ -157,7 +160,6 @@ Solver 2
   Active Coordinate = Integer 3
   Operator 1 = depth
   Operator 2 = height
-  Exported Variable 1 = FS upper
 End
 
 !#-----------------------------------------------------------------------
@@ -200,10 +202,12 @@ Solver 3
   Exported Variable 2 = haf
   Exported Variable 3 = meltRate
 
-!  Exported Variable 4 = -elem "sftgif" 
-!  Exported Variable 5 = -elem "sftgrf"  
-!  Exported Variable 6 = -elem "sftflf"
-  
+  Exported Variable 4 = -elem "sftgif" 
+  Exported Variable 5 = -elem "sftgrf"  
+  Exported Variable 6 = -elem "sftflf"
+
+  Exported Variable 7 = Bedrock
+
 End
 
 Solver 4
@@ -225,8 +229,14 @@ Solver 5
   Velocity Vector Name = String "Flow Solution"
   Constant-Viscosity Start =  Logical True
 
-  Linear System Solver = Iterative
-  include "block2_idrs.sif"
+  Linear System Solver = Direct
+  Linear System Direct Method = MUMPS
+  Linear System Abort Not Converged = True
+
+!  MUMPS percentage increase working space = 100
+
+!  Linear System Solver = Iterative
+!  include "block2_idrs.sif"
 
   !Linear System Iterative Method = "IDRS"
   !Linear System Preconditioning = ILU0
@@ -241,12 +251,12 @@ Solver 5
   
   Nonlinear System Max Iterations = 100
   Nonlinear System Convergence Tolerance  = 1.0e-5
-  Nonlinear System Newton After Iterations = 10
-  Nonlinear System Newton After Tolerance = 1.0e-02
+  Nonlinear System Newton After Iterations = 100
+  Nonlinear System Newton After Tolerance = 1.0e-05
   Nonlinear System Reset Newton = Logical True
-  Steady State Convergence Tolerance = Real 1.0e-3
+  Steady State Convergence Tolerance = Real 1.0e-4
 
-  Average Velocity Name = string HOVIvel ! vertically averaged
+  Average Velocity Name = string HOVIvel ! vertically averaged horizontal velocity
 
 ! This is needed and must be somewhere accessible (not just surface)
   Exported Variable 1 = -dofs 1 "freeboard"
@@ -259,6 +269,7 @@ Solver 5
   Exported Variable 5 = "duz"
   Exported Variable 6 = -dofs 4 "Flow Solution Loads"
   Exported Variable 7 = -dofs 2 "HOVIvel" 
+  Exported Variable 8 = -dofs 1 FS upper
 End
 
 !#-----------------------------------------------------------------------
@@ -330,8 +341,8 @@ Solver 7
   Equation = "ProjectFSUpper"
   Procedure = File "StructuredProjectToPlane" "StructuredProjectToPlane"
   Active Coordinate = Integer 3
-  Variable 1 = String FS upper
-  Operator = String bottom
+  Variable 1 = String "FS upper"
+  Operator 1 = String "bottom"
 End
 
 Solver 8
@@ -341,7 +352,7 @@ Solver 8
   Active Coordinate = Integer 3
   Dot Product Tolerance = Real 0.001
   Minimum Mesh Height = Real 20.0
-  Top Surface Variable Name = String FS upper
+  Top Surface Variable Name = String Bottom FS upper ! FS upper after being projected up through the mesh
   Bottom Surface Variable Name = String FS lower
 End
 
@@ -353,11 +364,6 @@ Solver 9
   Output File Name = File $name
   Output Format = String "vtu"
   Output Directory = File "VTUoutputs"
-!  Scalar FIeld 1 = String Height
-!  Scalar FIeld 2 = String Depth 
-!  Scalar FIeld 3 = String MeltRate
-!  Scalar FIeld 4 = String GroundedMask
-!  Vector Field 1 = String Velocity
   Vtu Format = Logical True
 End
 
@@ -389,24 +395,19 @@ Boundary Condition 1
   Name = "upstream"
   Target Boundaries(1)  = 1
 
-  ComputeNormal = Logical True
+!  Slip Coefficient 1 = Real 0.0
+!  Slip Coefficient 2 = Real 10.0
 End
 
 Boundary Condition 2
   Name = "icefront"
   Target Boundaries(1)  = 3
 
-  ComputeNormal = Logical True
-
-  External Pressure = Variable Coordinate 3
-    Real Procedure "ElmerIceUSF" "SeaPressure"
 End
 
 Boundary Condition 3
   Name = "sidewall"
   Target Boundaries(2)  = 2 4
-
-  ComputeNormal = Logical True
 
   Slip Coefficient 1 = Real 10.0
   Slip Coefficient 2 = Real 0.0
@@ -417,30 +418,19 @@ Boundary Condition 4
   Target Boundaries(1) = 5
   Body Id = 2
   height = Real 0.0
-  ComputeNormal = Logical True
-
-  Grounding Line Definition = string discontinuous
 
   Slip Coefficient 2 = Variable Coordinate 3
     Real Procedure "ElmerIceUSF" "SlidCoef_Contact"
   Slip Coefficient 3 = Variable Coordinate 3
     Real Procedure "ElmerIceUSF" "SlidCoef_Contact"
-  
+  Test Contact Tolerance = real 1.0e-10
+
+  Grounding Line Definition = string discontinuous
+
   Sliding Law = String Weertman
   Weertman Friction Coefficient = Real 0.001
   Weertman Exponent = Real 1.0
-  Weertman Linear Velocity = Real 0.0000000001
-
-!  Sliding Law = String Budd
-!  Budd Friction Coefficient = Real $0.1/1000.0
-  Budd Friction Coefficient = Real #beta
-  Budd Velocity Exponent = Real 1.0
-  Budd Zab Exponent = Real 1.0
-  Budd Linear Velocity = Real 0.0000000001
-  Budd Ocean Density = Real #rhow
-  Budd Gravity = Real #gravity
-!  Budd Floatation = Logical False
-  Budd Floatation = Logical True
+  Weertman Linear Velocity = Real 0.000001
 
   Save Scalars = logical true
 End
@@ -448,6 +438,5 @@ End
 Boundary Condition 5
   Name = "upper_surface"
   Target Boundaries(1) = 6
-  ComputeNormal = Logical True
   depth = Real 0.0
 End

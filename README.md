@@ -46,6 +46,7 @@ We borrow approaches from Stokes and SSA setups for different aspects of transie
 
 Mesh extrusion tools and 3D boundary labelling are used similar to Stokes simulations. The HO solver itself runs on the 3D main body. The basal friction is calculated using the same code as the Stokes solver.
 
+We use SlidCoef_Contact to access the sliding laws and the "Grounding line definition", but with "Test Contact Tolerance" set very small because we don't want to use the contact condition.
 
 ## SSA elements
 
