@@ -32,7 +32,7 @@ Simulation
   Timestepping Method = "BDF"
   BDF Order = 1
 
-  Timestep Intervals = 120
+  Timestep Intervals = 12
   Timestep Sizes = Real $dt
   Output Intervals = 1
 
@@ -76,6 +76,8 @@ Initial Condition 1
   Normal Vector 2 = Real 0.0
   Normal Vector 3 = Real 0.0
   FS upper = Variable Coordinate 2 
+    Real Procedure  "GeometryFunctions" "Ex5_UpperSurface_w"
+  Bottom FS upper = Variable Coordinate 2 
     Real Procedure  "GeometryFunctions" "Ex5_UpperSurface_w"
   ReferenceFS upper = Variable Coordinate 2 
     Real Procedure  "GeometryFunctions" "Ex5_UpperSurface_w"
@@ -270,6 +272,7 @@ Solver 5
   Exported Variable 6 = -dofs 4 "Flow Solution Loads"
   Exported Variable 7 = -dofs 2 "HOVIvel" 
   Exported Variable 8 = -dofs 1 FS upper
+  Exported Variable 9 = -dofs 1 Bottom FS upper
 End
 
 !#-----------------------------------------------------------------------
@@ -403,6 +406,8 @@ Boundary Condition 2
   Name = "icefront"
   Target Boundaries(1)  = 3
 
+!  Normal Surface Traction = Variable Coordinate 3, Bottom FS upper
+!    Real Lua "-(math.max(rhow*math.abs(gravity)*(zsl - tx[0]), 0.0) - rhoi*math.abs(gravity)*(tx[1] - tx[0]))"
 End
 
 Boundary Condition 3
